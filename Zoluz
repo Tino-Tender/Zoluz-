@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoluz Stock Management</title>
+<style>
+body { font-family: Arial, sans-serif; background-color:#fefefe; color:#333; margin:0; padding:0;}
+header { background: linear-gradient(90deg,#1E90FF,#FFA500,#FFFF00); padding:20px; text-align:center; color:white;}
+h1,h2{margin:0 0 10px 0;}
+main{padding:20px;}
+section{background-color:#e6f2ff; border-radius:10px; padding:20px; margin-bottom:20px;}
+form input, form button{padding:10px; margin:5px;}
+button{background-color:#FFA500; border:none; color:white; cursor:pointer; border-radius:5px;}
+button:hover{background-color:#FF8C00;}
+table{width:100%; border-collapse:collapse; margin-top:15px;}
+table, th, td{border:1px solid #333;}
+th, td{padding:10px; text-align:center;}
+th{background-color:#1E90FF; color:white;}
+.user-section, .material-section, .product-section{border:2px solid #FFA500;}
+.expired{background-color:#FF6347; color:white;}
+</style>
+</head>
+<body>
+<header><h1>Zoluz Stock Management</h1></header>
+<main>
+<section class="user-section">
+<h2>User Login</h2>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="loginUser()">Login</button>
+<button onclick="logoutUser()">Logout</button>
+<p id="userMessage"></p>
+<p id="currentUserDisplay"></p>
+</section>
+
+<section class="material-section">
+<h2>Raw Material Stock</h2>
+<form id="materialForm">
+<input type="text" id="materialName" placeholder="Material Name" required>
+<input type="number" id="materialQty" placeholder="Quantity" required>
+<input type="text" id="materialBatch" placeholder="Batch Number" required>
+<input type="date" id="materialExpiry" placeholder="Expiry Date" required>
+<button type="submit">Add Material</button>
+</form>
+<table id="materialTable">
+<thead>
+<tr><th>Name</th><th>Qty</th><th>Batch</th><th>Expiry Date</th><th>Received Date</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</section>
+
+<section class="product-section">
+<h2>Issue Product</h2>
+<form id="productForm">
+<input type="text" id="productName" placeholder="Product Name" required>
+<input type="number" id="productQty" placeholder="Quantity" required>
+<input type="text" id="productBatch" placeholder="Batch Number" required>
+<button type="submit">Issue Product</button>
+</form>
+<table id="productTable">
+<thead>
+<tr><th>Product</th><th>Qty</th><th>Batch</th><th>Issue Date</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</section>
+
+<section class="password-section">
+<h2>Change Password</h2>
+<input type="password" id="oldPassword" placeholder="Old Password">
+<input type="password" id="newPassword" placeholder="New Password">
+<button onclick="changePassword()">Change Password</button>
+</section>
+</main>
+
+<script>
+// Predefined users with passwords
+let users = {
+  "Bernie": {password: "bern123", isAdmin:false},
+  "Siyanda": {password: "siy456", isAdmin:false},
+  "Lize": {password: "liz789", isAdmin:false},
+  "Tinotenda": {password: "tin000", isAdmin:true},
+  "Portfolio": {password: "port555", isAdmin:false}
+};
+
+let currentUser = null;
+
+// Stock data
+let materials = [];
+let products = [];
+
+// Login
+function loginUser() {
+  let username = document.getElementById('username').value.trim();
+  let password = document.getElementById('password').value;
+  let message = document.getElementById('userMessage');
+
+  if(!users[username]){
+    message.textContent = "User does not exist.";
+    return;
+  }
+  if(users[username].password !== password){
+    message.textContent = "Incorrect password.";
+    return;
+  }
+  currentUser = username;
+  message.textContent = `Logged in as ${username}.`;
+  document.getElementById('currentUserDisplay').textContent = `Current User: ${username}`;
+  toggleAdminFeatures();
+}
+
+// Logout
+function logoutUser(){
+  currentUser = null;
+  document.getElementById('userMessage').textContent = "Logged out.";
+  document.getElementById('currentUserDisplay').textContent = "";
+  toggleAdminFeatures();
+}
+
+// Toggle admin controls
+function toggleAdminFeatures(){
+  let materialForm = document.getElementById('materialForm');
+  let productForm = document.getElementById('productForm');
+  if(currentUser === "Tinotenda"){
+    materialForm.querySelectorAll("input,button").forEach(e=>e.disabled=false);
+    productForm.querySelectorAll("input,button").forEach(e=>e.disabled=false);
+  } else {
+    materialForm.querySelectorAll("input,button").forEach(e=>e.disabled=true);
+    productForm.querySelectorAll("input,button").forEach(e=>e.disabled=true);
+  }
+}
+
+// Add material
+document.getElementById('materialForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  if(currentUser!=="Tinotenda") return alert("Only Tinotenda can add stock!");
+
+  let name = document.getElementById('materialName').value;
+  let qty = parseInt(document.getElementById('materialQty').value);
+  let batch = document.getElementById('materialBatch').value;
+  let expiry = document.getElementById('materialExpiry').value;
+  let received = new Date().toLocaleDateString();
+
+  materials.push({name, qty, batch, expiry, received});
+  renderMaterials();
+  this.reset();
+});
+
+function renderMaterials() {
+  let tbody = document.querySelector('#materialTable tbody');
+  tbody.innerHTML = '';
+  let today = new Date().toISOString().split('T')[0];
+
+  materials.forEach(mat=>{
+    let tr = document.createElement('tr');
+    if(mat.expiry < today) tr.classList.add('expired');
+    tr.innerHTML = `<td>${mat.name}</td><td>${mat.qty}</td><td>${mat.batch}</td><td>${mat.expiry}</td><td>${mat.received}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Issue product
+document.getElementById('productForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  if(currentUser!=="Tinotenda") return alert("Only Tinotenda can issue stock!");
+
+  let productName = document.getElementById('productName').value;
+  let productQty = parseInt(document.getElementById('productQty').value);
+  let productBatch = document.getElementById('productBatch').value;
+  let issueDate = new Date().toLocaleDateString();
+
+  let material = materials.find(m => m.name.toLowerCase()===productName.toLowerCase() && m.qty>=productQty);
+  if(!material) return alert("Not enough material to issue product!");
+
+  material.qty -= productQty;
+  products.push({productName, productQty, productBatch, issueDate});
+  renderProducts();
+  renderMaterials();
+  this.reset();
+});
+
+function renderProducts() {
+  let tbody = document.querySelector('#productTable tbody');
+  tbody.innerHTML = '';
+  products.forEach(prod=>{
+    let tr = document.createElement('tr');
+    tr.innerHTML = `<td>${prod.productName}</td><td>${prod.productQty}</td><td>${prod.productBatch}</td><td>${prod.issueDate}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Change password
+function changePassword(){
+  if(!currentUser) return alert("Login first!");
+  let oldPass = document.getElementById('oldPassword').value;
+  let newPass = document.getElementById('newPassword').value;
+  if(users[currentUser].password !== oldPass) return alert("Old password incorrect!");
+  users[currentUser].password = newPass;
+  alert("Password changed successfully.");
+  document.getElementById('oldPassword').value='';
+  document.getElementById('newPassword').value='';
+}
+</script>
+</body>
+</html>
